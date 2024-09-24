@@ -8,11 +8,21 @@ import socket
 HOST = "127.0.0.1"
 PORT = 5000
 
-with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-    s.bind((HOST, PORT))
-    print(f"UDP-сервер запущен на {HOST}:{PORT}. Ожидание пакетов...")
+def start_udp_server():
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server.bind((HOST, PORT))
+    print(f"Server is awaiting a connecting to {HOST}:{PORT}")
 
     while True:
-        data, addr = s.recvfrom(1024)
-        print(f"Получено: {data.decode()} от {addr}")
-        s.sendto(data, addr)
+        data, adr = server.recvfrom(1024)
+        print(f"Recieved message from client: {data.decode('utf-8')}")
+        
+        server.sendto(data, adr)
+        print('Message was send')
+        
+        server.close()
+        break
+
+# Запускаем сервер
+if __name__ == "__main__":
+    start_udp_server()
