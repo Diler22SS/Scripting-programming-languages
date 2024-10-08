@@ -10,4 +10,4 @@
 
 [1]: https://github.com/Diler22SS/Scripting-programming-languages/blob/main/lab%201%20requests/main.py
 [2]: https://github.com/Diler22SS/Scripting-programming-languages/tree/main/lab%202%20tcp%20udp
-[3]: https://github.com/Diler22SS/Scripting-programming-languages/tree/main/lab%202%20tcp%20udp
+[3]: https://github.com/Diler22SS/Scripting-programming-languages/blob/main/lab%203%20sqlite/main.py
