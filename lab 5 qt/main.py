@@ -5,29 +5,6 @@ import sqlite3
 from PyQt5 import QtWidgets, QtSql, QtCore
 from PyQt5.QtCore import QTimer
 
-'''
-Задание:
-
-1) Реализация фонового выполнения HTTP-запросов:
-Реализуйте многозадачность с помощью модуля threading или asyncio для выполнения HTTP-запросов.
-При нажатии кнопки "Загрузить данные" приложение должно отправить запросы к тестовому серверу (например, https://jsonplaceholder.typicode.com/posts) и получить список постов (добавьте задержку, чтобы запрос занимал больше времени).
-Настройте код так, чтобы запросы выполнялись в отдельном потоке и не блокировали интерфейс PyQt5
-
-2) Асинхронное сохранение данных в базу SQLite:
-После получения данных из сервера, сохраните их в базу данных SQLite (также добавьте задержку при сохранении данных).
-Реализуйте сохранение данных в фоновом потоке, чтобы процесс записи не блокировал интерфейс.
-Обновите интерфейс PyQt5 для отображения данных после их успешного сохранения в базе данных.
-
-3) Динамическое обновление пользовательского интерфейса:
-Настройте обновление интерфейса PyQt5 в реальном времени: создайте индикатор выполнения или статус-бар для отображения хода загрузки и сохранения данных.
-Сделайте так, чтобы после завершения фоновой загрузки и сохранения данных, в интерфейсе автоматически отображались новые записи.
-
-4)Асинхронное обновление данных по таймеру:
-Для закрепления навыков реализуйте периодическую проверку обновлений данных на сервере (например, каждые 10 секунд).
-Используйте модуль QTimer из PyQt5 для выполнения периодических проверок на обновления в интерфейсе.
-'''
-
-
 
 def create_connection():
     db = QtSql.QSqlDatabase.addDatabase('QSQLITE')
@@ -36,6 +13,7 @@ def create_connection():
         QtWidgets.QMessageBox.critical(None, "Database Error", "Cannot open database.")
         return False
     return True
+
 
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
@@ -201,8 +179,6 @@ class MainWindow(QtWidgets.QWidget):
         """)
 
 
-
-
 class PostUploader(QtCore.QThread):
     progress_updated = QtCore.pyqtSignal(int)  # Сигнал для обновления прогресс-бара
     status_updated = QtCore.pyqtSignal(str)     # Сигнал для обновления статус-метки
@@ -242,10 +218,12 @@ class PostUploader(QtCore.QThread):
         # connection.close()
 
 
-
-
 class PostUpdater(QtCore.QThread):
     finished = QtCore.pyqtSignal()
+    def __init__(self):
+        super().__init__()
+        self.db_lock = asyncio.Lock()
+
     def run(self):
         asyncio.run(self.check_for_updates())
 
@@ -254,20 +232,20 @@ class PostUpdater(QtCore.QThread):
             await asyncio.sleep(2)
             url = "https://jsonplaceholder.typicode.com/posts"
             new_posts = requests.get(url).json()
-            
-            with sqlite3.connect('posts.db') as connection:
-                cursor = connection.cursor()
-                for post in new_posts:
-                    cursor.execute(
-                        "INSERT OR IGNORE INTO posts(user_id, title, body) VALUES (?, ?, ?)",
-                        (post["userId"], post["title"], post["body"])
-                    )
-                connection.commit()
-                # connection.close()
-        except Exception as e:
-            pass
-        self.finished.emit()
 
+            # Use the lock to ensure single access
+            async with self.db_lock:
+                with sqlite3.connect('posts.db') as connection:
+                    cursor = connection.cursor()
+                    for post in new_posts:
+                        cursor.execute(
+                            "INSERT OR IGNORE INTO posts(user_id, title, body) VALUES (?, ?, ?)",
+                            (post["userId"], post["title"], post["body"])
+                        )
+                    connection.commit()
+        except Exception as e:
+            print(e)
+        self.finished.emit()
 
 
 if __name__ == '__main__':
